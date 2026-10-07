@@ -36,8 +36,14 @@ jobs:
           AXIS_CSV_URL: ${{ vars.AXIS_CSV_URL }}         # Variables (없으면 axis_rules.csv)
           TYPE_CSV_URL: ${{ vars.TYPE_CSV_URL }}         # Variables (없으면 types.csv)
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}  # Secrets (Decoding 키)
-        # 실제 데이터로 바꿀 때: 아래 줄의 --api-fixture 부분을 지웁니다
-        run: python main.py --api-fixture fixtures/stores_sample.json --output _site/index.html
+        # data/stores.json.gz = 상가정보 API에서 받아 저장해 둔 서울 전체 업소(2026년 6월 기준).
+        # 예약 실행(매달)은 API를 새로 부르고, push·버튼 실행은 저장 파일로 빠르게 다시 계산합니다.
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            python main.py --output _site/index.html
+          else
+            python main.py --cache data/stores.json.gz --output _site/index.html
+          fi
       - name: Configure Pages
         uses: actions/configure-pages@v6
       - name: Upload Pages artifact

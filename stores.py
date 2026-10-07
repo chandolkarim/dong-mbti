@@ -5,6 +5,7 @@
 서울(시도 코드 11)을 한 페이지 1,000개씩 끝까지 넘기며 받습니다. 서울 전체는 수백 번 호출합니다.
 """
 
+import gzip
 import json
 from pathlib import Path
 import time
@@ -128,4 +129,8 @@ def save_cache(result, path):
 
 
 def load_cache(path):
+    """저장 파일을 읽습니다. .gz로 끝나면 압축을 풀어 읽습니다(저장소에 넣어 둔 data/stores.json.gz)."""
+    if str(path).endswith(".gz"):
+        with gzip.open(path, "rt", encoding="utf-8") as source:
+            return json.load(source)
     return json.loads(Path(path).read_text(encoding="utf-8"))
