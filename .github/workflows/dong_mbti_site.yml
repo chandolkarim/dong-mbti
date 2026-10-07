@@ -36,7 +36,8 @@ jobs:
           AXIS_CSV_URL: ${{ vars.AXIS_CSV_URL }}         # Variables (없으면 axis_rules.csv)
           TYPE_CSV_URL: ${{ vars.TYPE_CSV_URL }}         # Variables (없으면 types.csv)
           DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}  # Secrets (Decoding 키)
-        run: python main.py --output _site/index.html
+        # 실제 데이터로 바꿀 때: 아래 줄의 --api-fixture 부분을 지웁니다
+        run: python main.py --api-fixture fixtures/stores_sample.json --output _site/index.html
       - name: Configure Pages
         uses: actions/configure-pages@v6
       - name: Upload Pages artifact

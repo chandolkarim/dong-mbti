@@ -250,6 +250,7 @@ function showMatch(b) {
 function renderStatic() {
   const m = META, month = m.base_month ? `${m.base_month.slice(0, 4)}년 ${+m.base_month.slice(4)}월 기준 · ` : "";
   $("lead").textContent = `${month}서울 행정동 ${m.judged}곳의 상가 ${m.stores.toLocaleString()}개로 판정한 동네 성격`;
+  if (m.origin.includes("모의")) $("lead").textContent += " · 지금은 모의 데이터로 보여 주는 중";
   const kw = Object.entries(m.keywords).map(([axis, sides]) => Object.entries(sides).map(([side, list]) =>
     `<tr><td>${axis}</td><td><b>${side}</b> ${esc(m.names[side])}</td><td>${list.map(esc).join(", ")}</td></tr>`).join("")).join("");
   $("methodBody").innerHTML = `

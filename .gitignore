@@ -5,3 +5,4 @@ cache/
 
 # 인증키를 넣는 파일. GitHub에 올리지 않습니다
 .env
+cache_run.log
