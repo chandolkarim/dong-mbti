@@ -1,0 +1,56 @@
+name: Dong MBTI Site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  # 상가정보는 분기마다 갱신되므로 한 달에 한 번이면 충분합니다.
+  schedule:
+    - cron: '17 23 1 * *'  # 매달 1일 UTC 23:17 = 한국시간 2일 08:17
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30  # 서울 전체 업소를 1,000개씩 수백 번 받습니다
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Test with saved responses
+        run: python -m unittest discover -s tests -v
+      - name: Build page from Google Sheets and Open API
+        env:
+          # 저장소 Settings → Secrets and variables → Actions
+          AXIS_CSV_URL: ${{ vars.AXIS_CSV_URL }}         # Variables (없으면 axis_rules.csv)
+          TYPE_CSV_URL: ${{ vars.TYPE_CSV_URL }}         # Variables (없으면 types.csv)
+          DATA_GO_KR_KEY: ${{ secrets.DATA_GO_KR_KEY }}  # Secrets (Decoding 키)
+        run: python main.py --output _site/index.html
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

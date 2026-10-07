@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>동네 MBTI</title>
+<meta name="description" content="서울 행정동의 상가 데이터로 동네 성격을 판정하고, 닮은 동네와 동네 궁합을 보여 줍니다">
+<style>
+  :root {
+    --bg: #f6f4ef; --paper: #ffffff; --ink: #1d1b18; --muted: #6c675f; --line: #e3dfd6;
+    --accent: #3b5bdb; --accent-soft: #e9eeff; --pink: #d6336c; --pink-soft: #fde8ef;
+    --bar: #ece8df; --shadow: 0 1px 2px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141312; --paper: #1d1c1a; --ink: #ece9e3; --muted: #a29c92; --line: #34312d;
+      --accent: #8ea6ff; --accent-soft: #232a45; --pink: #f783ac; --pink-soft: #3a1f2a;
+      --bar: #2c2a27; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); word-break: keep-all;
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 28px 16px 56px; }
+  header h1 { margin: 0; font-size: 28px; letter-spacing: -0.03em; }
+  header p { margin: 4px 0 0; color: var(--muted); }
+  .panel { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-top: 16px; box-shadow: var(--shadow); }
+  h2 { font-size: 17px; margin: 0 0 10px; }
+  .search { position: relative; display: flex; gap: 8px; }
+  .search input { flex: 1; min-width: 0; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--ink); }
+  .search input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  button { font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid var(--line); background: var(--paper); color: var(--ink); padding: 9px 12px; }
+  button:hover { border-color: var(--accent); }
+  .suggest { position: absolute; z-index: 5; left: 0; right: 0; top: 46px; background: var(--paper); border: 1px solid var(--line);
+    border-radius: 10px; box-shadow: var(--shadow); max-height: 280px; overflow: auto; display: none; }
+  .suggest.open { display: block; }
+  .suggest button { display: flex; justify-content: space-between; width: 100%; border: 0; border-radius: 0; text-align: left; padding: 9px 12px; }
+  .suggest button:hover, .suggest button.active { background: var(--accent-soft); }
+  .suggest small { color: var(--muted); }
+  .card-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .where { color: var(--muted); font-size: 14px; }
+  .dongname { font-size: 22px; font-weight: 700; }
+  .type { font-size: 56px; font-weight: 800; letter-spacing: 0.04em; line-height: 1; color: var(--accent); }
+  .nick { font-size: 18px; font-weight: 700; margin-top: 10px; }
+  .intro { margin: 4px 0 0; }
+  .axes { margin-top: 16px; display: grid; gap: 12px; }
+  .axis-top { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+  .axis-top b { color: var(--ink); }
+  .track { position: relative; height: 10px; border-radius: 99px; background: var(--bar); margin: 4px 0 2px; }
+  .track .fill { position: absolute; top: 0; bottom: 0; border-radius: 99px; background: var(--accent); }
+  .track .mid { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: var(--line); }
+  .axis-note { font-size: 13px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .chip { background: var(--accent-soft); border-radius: 99px; padding: 4px 10px; font-size: 13px; }
+  .chip b { color: var(--accent); }
+  .sub { margin-top: 18px; font-size: 14px; font-weight: 700; }
+  .similar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 6px; }
+  .similar button { text-align: left; }
+  .similar .t { font-weight: 800; color: var(--accent); }
+  .similar small { display: block; color: var(--muted); }
+  .held { padding: 10px 12px; border-radius: 10px; background: var(--bar); margin-top: 12px; }
+  .vs { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; }
+  .vs .heart { color: var(--pink); font-size: 22px; text-align: center; }
+  .pick { padding: 10px 12px; border: 1px dashed var(--line); border-radius: 10px; min-height: 46px; }
+  .pick b { display: block; }
+  .score { display: flex; align-items: baseline; gap: 10px; margin-top: 14px; }
+  .score .num { font-size: 44px; font-weight: 800; color: var(--pink); line-height: 1; }
+  .score .grade { font-size: 18px; font-weight: 700; }
+  .reasons { margin: 10px 0 0; padding-left: 18px; }
+  .reasons li { margin: 3px 0; }
+  details { margin-top: 16px; color: var(--muted); font-size: 14px; }
+  details summary { cursor: pointer; color: var(--ink); }
+  details table { border-collapse: collapse; width: 100%; margin-top: 8px; }
+  details td, details th { border-top: 1px solid var(--line); padding: 5px 6px; text-align: left; vertical-align: top; }
+  footer { margin-top: 20px; color: var(--muted); font-size: 12.5px; }
+  footer a { color: inherit; }
+  @media (max-width: 560px) {
+    .type { font-size: 44px; }
+    .similar { grid-template-columns: 1fr; }
+    .vs { grid-template-columns: 1fr; }
+    .vs .heart { transform: rotate(90deg); }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>동네 MBTI</h1>
+    <p id="lead"></p>
+  </header>
+
+  <section class="panel" aria-label="동네 찾기">
+    <div class="search" id="mainSearch">
+      <input id="q" type="search" placeholder="동 이름을 입력하세요 (예: 이문, 서교, 역삼)" autocomplete="off" aria-label="동 이름 검색">
+      <button id="random" type="button">아무 동네</button>
+      <div class="suggest" id="qList" role="listbox"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="card" aria-live="polite"></section>
+
+  <section class="panel" id="match">
+    <h2>동네 궁합</h2>
+    <div class="vs">
+      <div class="pick" id="pickA"></div>
+      <div class="heart" aria-hidden="true">♥</div>
+      <div>
+        <div class="search" id="bSearch">
+          <input id="qb" type="search" placeholder="궁합을 볼 동네" autocomplete="off" aria-label="궁합을 볼 동네 검색">
+          <div class="suggest" id="qbList" role="listbox"></div>
+        </div>
+      </div>
+    </div>
+    <div id="matchResult"></div>
+  </section>
+
+  <details class="panel" id="method">
+    <summary>어떻게 계산했나요? (재미용, 산식 공개)</summary>
+    <div id="methodBody"></div>
+  </details>
+
+  <footer id="foot"></footer>
+</main>
+
+<script>
+const DATA = /*__DATA__*/null;
+const META = DATA.meta;
+const DONGS = DATA.dongs;
+const BY_CODE = Object.fromEntries(DONGS.map(d => [d.code, d]));
+const JUDGED = DONGS.filter(d => !d.held);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const label = d => `${d.gu} ${d.name}`;
+let current = null;
+
+function cosine(a, b) {
+  let dot = 0, na = 0, nb = 0;
+  for (let i = 0; i < a.length; i++) { dot += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
+  return na && nb ? dot / Math.sqrt(na * nb) : 0;
+}
+function likeness(sim) {
+  const span = (META.cos_max - META.cos_min) || 1;
+  return Math.max(0, Math.min(1, (sim - META.cos_min) / span));
+}
+
+/* ── 검색 ─────────────────────────────── */
+function matches(text) {
+  const q = text.replace(/\s+/g, "");
+  if (!q) return [];
+  return DONGS.filter(d => (d.gu + d.name).replace(/\s+/g, "").includes(q) || d.name.includes(q)).slice(0, 12);
+}
+function attachSearch(input, list, onPick) {
+  let items = [], active = 0;
+  const render = () => {
+    list.innerHTML = items.map((d, i) =>
+      `<button type="button" role="option" data-i="${i}" class="${i === active ? "active" : ""}">
+         <span>${esc(label(d))}</span><small>${d.held ? "판정 보류" : esc(d.type)}</small></button>`).join("");
+    list.classList.toggle("open", items.length > 0);
+  };
+  input.addEventListener("input", () => { items = matches(input.value); active = 0; render(); });
+  input.addEventListener("keydown", e => {
+    if (!items.length) return;
+    if (e.key === "ArrowDown") { active = (active + 1) % items.length; render(); e.preventDefault(); }
+    if (e.key === "ArrowUp") { active = (active - 1 + items.length) % items.length; render(); e.preventDefault(); }
+    if (e.key === "Enter") { pick(items[active]); e.preventDefault(); }
+    if (e.key === "Escape") { items = []; render(); }
+  });
+  list.addEventListener("mousedown", e => {
+    const b = e.target.closest("button"); if (b) { pick(items[+b.dataset.i]); e.preventDefault(); }
+  });
+  input.addEventListener("blur", () => setTimeout(() => list.classList.remove("open"), 120));
+  function pick(d) { input.value = ""; items = []; render(); onPick(d); }
+}
+
+/* ── 성격 카드 ─────────────────────────── */
+function axisRow(a) {
+  const leftSide = a.letter === a.left;
+  const pos = a.rank * 100;                       // 0=오른쪽 끝, 100=왼쪽 끝 (왼쪽 글자 쪽 비율의 백분위)
+  const from = Math.min(50, 100 - pos), to = Math.max(50, 100 - pos);
+  const name = leftSide ? a.left_name : a.right_name;
+  return `<div>
+    <div class="axis-top"><span><b>${a.left}</b> ${esc(a.left_name)}</span><span>${esc(a.right_name)} <b>${a.right}</b></span></div>
+    <div class="track"><div class="mid"></div><div class="fill" style="left:${from}%;width:${Math.max(2, to - from)}%"></div></div>
+    <div class="axis-note"><b>${a.letter}</b> · ${esc(name)} 쪽 서울 상위 ${a.top}%
+      <span style="color:var(--muted)">(${esc(a.left_name)} ${a.left_count} : ${esc(a.right_name)} ${a.right_count})</span></div>
+  </div>`;
+}
+function showCard(d, push = true) {
+  current = d;
+  if (push && location.hash !== "#" + d.code) history.replaceState(null, "", "#" + d.code);
+  const card = $("card");
+  const head = `<div class="card-head"><div><div class="where">${esc(d.gu)} · 업소 ${d.stores.toLocaleString()}개</div>
+      <div class="dongname">${esc(d.name)}</div></div>${d.held ? "" : `<div class="type">${esc(d.type)}</div>`}</div>`;
+  if (d.held) {
+    card.innerHTML = head + `<div class="held">판정 보류: 업소가 ${d.stores}개라 기준(${META.rules.min_stores}개)보다 적어요. 주거 위주의 조용한 동네일 가능성이 높아요.</div>`;
+  } else {
+    const feats = d.features.length
+      ? d.features.map(f => `<span class="chip">${esc(f.name)} <b>서울 평균의 ${f.times}배</b></span>`).join("")
+      : `<span class="chip">서울 평균과 비슷한 고른 구성</span>`;
+    const sims = d.similar.map(s => {
+      const o = BY_CODE[s.code];
+      return `<button type="button" data-code="${o.code}"><span class="t">${esc(o.type)}</span> ${esc(o.name)}
+        <small>${esc(o.gu)} · 닮음 ${Math.round(likeness(s.sim) * 100)}%</small></button>`;
+    }).join("");
+    card.innerHTML = head + `
+      <div class="nick">${esc(d.nickname)}</div><p class="intro">${esc(d.intro)}</p>
+      <div class="axes">${d.axes.map(axisRow).join("")}</div>
+      <div class="sub">이 동네만의 특징</div><div class="chips">${feats}</div>
+      <div class="sub">나랑 닮은 동네</div><div class="similar">${sims}</div>`;
+    card.querySelectorAll(".similar button").forEach(b => b.addEventListener("click", () => {
+      showCard(BY_CODE[b.dataset.code]); window.scrollTo({ top: card.offsetTop - 12, behavior: "smooth" });
+    }));
+  }
+  $("pickA").innerHTML = `<small style="color:var(--muted)">내 동네</small><b>${esc(label(d))} ${d.held ? "" : esc(d.type)}</b>`;
+  $("matchResult").innerHTML = "";
+  if (matchB) showMatch(matchB);
+}
+
+/* ── 궁합 ─────────────────────────────── */
+let matchB = null;
+function lifts(d) { return d.vec.map((v, i) => META.seoul_vec[i] ? v / META.seoul_vec[i] : 0); }
+function showMatch(b) {
+  matchB = b;
+  const a = current, out = $("matchResult");
+  if (!a || a.held || b.held) {
+    out.innerHTML = `<div class="held">${esc(label(b.held ? b : a))}은(는) 판정 보류 동네라 궁합을 계산할 수 없어요.</div>`; return;
+  }
+  if (a.code === b.code) { out.innerHTML = `<div class="held">같은 동네예요. 다른 동네를 골라 보세요.</div>`; return; }
+  const like = likeness(cosine(a.vec, b.vec));
+  const comp = a.axes.reduce((s, x, i) => s + Math.abs(x.rank - b.axes[i].rank), 0) / a.axes.length;
+  const score = Math.round(50 + 50 * (0.6 * like + 0.4 * comp));
+  const grade = score >= 90 ? "천생연분" : score >= 80 ? "잘 맞는 이웃" : score >= 70 ? "무난한 사이" : "서로 다른 매력";
+  const la = lifts(a), lb = lifts(b), names = META.middles;
+  const both = names.map((n, i) => [n, Math.min(la[i], lb[i])]).filter(x => x[1] > 1.2).sort((x, y) => y[1] - x[1]).slice(0, 2);
+  const aGives = names.map((n, i) => [n, lb[i] ? la[i] / lb[i] : la[i]]).filter((x, i) => la[i] > 1.2).sort((x, y) => y[1] - x[1])[0];
+  const bGives = names.map((n, i) => [n, la[i] ? lb[i] / la[i] : lb[i]]).filter((x, i) => lb[i] > 1.2).sort((x, y) => y[1] - x[1])[0];
+  const diff = a.axes.map((x, i) => x.letter !== b.axes[i].letter ? `${x.letter}↔${b.axes[i].letter}` : "").filter(Boolean);
+  const reasons = [];
+  reasons.push(`업종 구성 닮음 ${Math.round(like * 100)}% · 성격 차이 ${Math.round(comp * 100)}%`);
+  if (both.length) reasons.push(`닮은 점: 둘 다 ${both.map(x => esc(x[0])).join("·")}이(가) 서울 평균보다 많아요`);
+  if (aGives && bGives) reasons.push(`서로 채워 주는 점: ${esc(a.name)}의 ${esc(aGives[0])} ↔ ${esc(b.name)}의 ${esc(bGives[0])}`);
+  reasons.push(diff.length ? `다른 글자 ${diff.join(", ")}: 서로 없는 걸 채워 주는 사이` : "네 글자가 모두 같은 쌍둥이 동네");
+  out.innerHTML = `<div class="score"><span class="num">${score}</span><span class="grade">${grade}</span></div>
+    <div style="color:var(--muted)">${esc(label(a))} ${esc(a.type)} ♥ ${esc(label(b))} ${esc(b.type)}</div>
+    <ul class="reasons">${reasons.map(r => `<li>${r}</li>`).join("")}</ul>`;
+}
+
+/* ── 설명·출처 ─────────────────────────── */
+function renderStatic() {
+  const m = META, month = m.base_month ? `${m.base_month.slice(0, 4)}년 ${+m.base_month.slice(4)}월 기준 · ` : "";
+  $("lead").textContent = `${month}서울 행정동 ${m.judged}곳의 상가 ${m.stores.toLocaleString()}개로 판정한 동네 성격`;
+  const kw = Object.entries(m.keywords).map(([axis, sides]) => Object.entries(sides).map(([side, list]) =>
+    `<tr><td>${axis}</td><td><b>${side}</b> ${esc(m.names[side])}</td><td>${list.map(esc).join(", ")}</td></tr>`).join("")).join("");
+  $("methodBody").innerHTML = `
+    <p>축마다 왼쪽 업종 수 ÷ (왼쪽 + 오른쪽 업종 수)를 구하고, 서울의 모든 동 가운데 몇 번째인지(백분위)로 글자를 정해요.
+       절반보다 위면 왼쪽 글자예요. T/F는 지점명이 있거나 서울에서 같은 상호가 ${m.rules.chain_min}번 이상 나오면 프랜차이즈로 셉니다.</p>
+    <p>특징 업종은 동의 소분류 비율 ÷ 서울 비율이 가장 큰 3개, 닮은 동네는 중분류 비율 벡터의 코사인 유사도가 가장 큰 3곳이에요.
+       궁합 = 50 + 50 × (0.6 × 업종 닮음 + 0.4 × 네 축 차이). 업소가 ${m.rules.min_stores}개보다 적은 동은 판정을 보류해요.</p>
+    <table><tr><th>축</th><th>쪽</th><th>업종 키워드 (구글 시트에서 관리)</th></tr>${kw}</table>`;
+  const s = m.source;
+  $("foot").innerHTML = `데이터: <a href="${esc(s.url)}">${esc(s.name)}</a> · ${esc(s.portal)} · ${esc(s.license)} · ${esc(m.origin)}<br>
+    생성 ${esc(m.generated_at.replace("T", " ").slice(0, 16))} (한국 시간) · __BUILD__ · <a href="dong.json">dong.json</a><br>
+    재미로 보는 판정이에요. 동네를 평가하거나 순위를 매기려는 것이 아니에요.`;
+}
+
+renderStatic();
+attachSearch($("q"), $("qList"), d => showCard(d));
+attachSearch($("qb"), $("qbList"), d => showMatch(d));
+$("random").addEventListener("click", () => showCard(JUDGED[Math.floor(Math.random() * JUDGED.length)]));
+const fromHash = () => BY_CODE[location.hash.slice(1)];
+window.addEventListener("hashchange", () => { const d = fromHash(); if (d) showCard(d, false); });
+showCard(fromHash() || JUDGED.find(d => d.name.startsWith("이문")) || JUDGED[0] || DONGS[0], false);
+</script>
+</body>
+</html>
